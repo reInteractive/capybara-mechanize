@@ -91,14 +91,18 @@ class Capybara::Driver::Mechanize < Capybara::Driver::RackTest
   end
   
   class ResponseProxy
+    require 'iconv'
     extend Forwardable
-    
-    def_delegator :page, :body
     
     attr_reader :page
     
     def initialize(page)
       @page = page
+    end
+    
+    def body
+      ic = Iconv.new('UTF-8//IGNORE', page.encoding)
+      ic.iconv(page.body + ' ')[0..-2]
     end
     
     def current_url
