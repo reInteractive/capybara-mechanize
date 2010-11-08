@@ -117,8 +117,12 @@ class Capybara::Driver::Mechanize < Capybara::Driver::RackTest
     end
     
     def body
-      ic = Iconv.new('UTF-8//IGNORE', page.encoding)
-      ic.iconv(page.body + ' ')[0..-2]
+      if page.respond_to?(:encoding)
+        ic = Iconv.new('UTF-8//IGNORE', page.encoding)
+        ic.iconv(page.body + ' ')[0..-2]
+      else
+        page.body
+      end
     end
     
     def current_url
