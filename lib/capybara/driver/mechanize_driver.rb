@@ -6,14 +6,22 @@ class Capybara::Driver::Mechanize < Capybara::Driver::RackTest
   def_delegator :agent, :scheme_handlers
   def_delegator :agent, :scheme_handlers=
   
-  def initialize(*args)
-    super
+  def initialize(app = nil)
     @agent = ::Mechanize.new
     @agent.redirect_ok = false
+    
+    if app
+     # Delegate the RackApp to the RackTest driver
+     super(app)
+    elsif !Capybara.app_host
+      raise ArgumentError, "You have to set at least Capybara.app_host or Capybara.app"
+    end
   end
   
   def reset!
     @agent.cookie_jar.clear!
+    @last_remote_host = nil
+    @last_request_remote = nil
     super
   end
   
@@ -30,7 +38,7 @@ class Capybara::Driver::Mechanize < Capybara::Driver::RackTest
     unless response.redirect?
       raise "Last response was not a redirect. Cannot follow_redirect!"
     end
-    
+
     location = if last_request_remote?
         remote_response.page.response['Location'] 
       else
@@ -42,24 +50,45 @@ class Capybara::Driver::Mechanize < Capybara::Driver::RackTest
   
   def get(url, params = {}, headers = {})
     if remote?(url)
-      process_remote_request(:get, url)
-    else 
+      process_remote_request(:get, url, params)
+    else
+      register_local_request
       super
     end
   end
 
   def post(url, params = {}, headers = {})
     if remote?(url)
-      process_remote_request(:post, url, params, headers)
-    else 
+      process_remote_request(:post, url, post_data(params), headers)
+    else
+      register_local_request
       super
+    end
+  end
+
+  def post_data(params)
+    params.inject({}) do |memo, param|
+      case param
+      when Hash
+        param.each {|attribute, value| memo[attribute] = value }
+        memo
+      when Array
+        case param.last
+        when Hash
+          param.last.each {|attribute, value| memo["#{param.first}[#{attribute}]"] = value }
+        else
+          memo[param.first] = param.last
+        end
+        memo
+      end
     end
   end
   
   def put(url, params = {}, headers = {})
     if remote?(url)
       process_remote_request(:put, url)
-    else 
+    else
+      register_local_request
       super
     end
   end
@@ -67,7 +96,8 @@ class Capybara::Driver::Mechanize < Capybara::Driver::RackTest
   def delete(url, params = {}, headers = {})
     if remote?(url)
       process_remote_request(:delete, url, params, headers)
-    else 
+    else
+      register_local_request
       super
     end
   end
@@ -79,7 +109,12 @@ class Capybara::Driver::Mechanize < Capybara::Driver::RackTest
       false
     else
       host = URI.parse(url).host
-      !(host.nil? || host.include?(Capybara.default_host))
+      
+      if host.nil? && last_request_remote?
+        true
+      else
+        !(host.nil? || host.include?(Capybara.default_host))
+      end
     end
   end
 
@@ -90,15 +125,28 @@ class Capybara::Driver::Mechanize < Capybara::Driver::RackTest
   def last_request_remote?
     !!@last_request_remote
   end
+  
+  def register_local_request
+    @last_remote_host = nil
+    @last_request_remote = false
+  end
 
   def process_remote_request(method, url, *options)
     if remote?(url)
-      url = File.join((Capybara.app_host || Capybara.default_host), url) if URI.parse(url).host.nil?
+      remote_uri = URI.parse(url)
+
+      if remote_uri.host.nil?
+        remote_host = @last_remote_host || Capybara.app_host || Capybara.default_host
+        url = File.join(remote_host, url)
+        url = "http://#{url}" unless url.include?("http")
+      else
+        @last_remote_host = "#{remote_uri.host}:#{remote_uri.port}"
+      end
+      
       reset_cache
       @agent.send *( [method, url] + options)
+        
       @last_request_remote = true
-    else
-      @last_request_remote = false
     end
   end
 
@@ -130,7 +178,10 @@ class Capybara::Driver::Mechanize < Capybara::Driver::RackTest
     end
     
     def headers
-      page.response
+      # Hax the content-type contains utf8, so Capybara specs are failing, need to ask mailinglist  
+      headers = page.response
+      headers["content-type"].gsub!(';charset=utf-8', '') if headers["content-type"]
+      headers
     end
 
     def status

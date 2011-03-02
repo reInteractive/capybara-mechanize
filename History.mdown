@@ -1,0 +1,24 @@
+# Version 0.2.7
+Release date: 01-02-2011
+
+- Capybara::Driver::Mechanize#reset! needs to reset last_remote_host and last_request_remote state between sessions. [Joel Chippindale and Jon Gilbraith]
+
+# Version 0.2.6
+Release date: 12-01-2011
+
+- Manage nested map in Driver#post method to create post data [Alban Peignier]
+- add ruby19 support for gemfile [petrushka]
+
+# Version 0.2.5
+Release date: 15-11-2010
+
+- Include parameters when sending get requests to remote hosts [David, Iain McCoy]
+- specifiying version of sinatra and fixing remote test URL [David, Iain McCoy]
+- Make sure a RackApp isn't needed when we only want to test a remote app [Jeroen van Dijk]
+- Make sure that relative paths in a remote context are treated as remote [Jeroen van Dijk]
+- Start using RSpec 2 [Fred Wu]
+- Stay compatible with Capybara master [Fred Wu]
+
+# Version 0.2.4 and older
+
+Initial work [Jeroen van Dijk]

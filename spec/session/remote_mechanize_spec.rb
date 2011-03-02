@@ -12,7 +12,7 @@ describe Capybara::Session do
     
     
     before do      
-      @session = Capybara::Session.new(:mechanize, TestApp)
+      @session = Capybara::Session.new(:mechanize)
     end
 
     describe '#driver' do
@@ -35,7 +35,7 @@ describe Capybara::Session do
       end
     end
 
-    # Pending: Still 12 failing tests here (result is 658 examples, 12 failures, instead of 350 examples)
+    # Pending: Still 16 failing tests here (result is 706 examples, 16 failures, instead of 385 examples)
     # it_should_behave_like "session"
 
     it_should_behave_like "session without javascript support"

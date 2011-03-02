@@ -2,7 +2,7 @@
 
 Gem::Specification.new do |s|
   s.name = %q{capybara-mechanize}
-  s.version = "0.2.3"
+  s.version = File.read("VERSION")
 
   s.required_rubygems_version = Gem::Requirement.new(">= 0") if s.respond_to? :required_rubygems_version=
   s.authors = ["Jeroen van Dijk"]
@@ -18,5 +18,6 @@ Gem::Specification.new do |s|
   s.rubygems_version = %q{1.3.7}
   
   s.add_runtime_dependency(%q<mechanize>, ["~> 1.0.0"])
+  s.add_runtime_dependency(%q<capybara>, ["~> 0.4.0"])
 end
 
