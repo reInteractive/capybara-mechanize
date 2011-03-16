@@ -2,14 +2,14 @@ require 'mechanize'
 
 class Capybara::Driver::Mechanize < Capybara::Driver::RackTest
   extend Forwardable
-  
+
   def_delegator :agent, :scheme_handlers
   def_delegator :agent, :scheme_handlers=
-  
+
   def initialize(app = nil)
     @agent = ::Mechanize.new
     @agent.redirect_ok = false
-    
+
     if app
      # Delegate the RackApp to the RackTest driver
      super(app)
@@ -17,22 +17,22 @@ class Capybara::Driver::Mechanize < Capybara::Driver::RackTest
       raise ArgumentError, "You have to set at least Capybara.app_host or Capybara.app"
     end
   end
-  
+
   def reset!
     @agent.cookie_jar.clear!
     @last_remote_host = nil
     @last_request_remote = nil
     super
   end
-  
+
   def current_url
     last_request_remote? ? remote_response.current_url : super
   end
-  
+
   def response
     last_request_remote? ? remote_response : super
   end
-  
+
   # TODO see how this can be cleaned up
   def follow_redirect!
     unless response.redirect?
@@ -40,14 +40,14 @@ class Capybara::Driver::Mechanize < Capybara::Driver::RackTest
     end
 
     location = if last_request_remote?
-        remote_response.page.response['Location'] 
+        remote_response.page.response['Location']
       else
         response['Location']
       end
-    
+
     get(location)
   end
-  
+
   def get(url, params = {}, headers = {})
     if remote?(url)
       process_remote_request(:get, url, params)
@@ -83,7 +83,7 @@ class Capybara::Driver::Mechanize < Capybara::Driver::RackTest
       end
     end
   end
-  
+
   def put(url, params = {}, headers = {})
     if remote?(url)
       process_remote_request(:put, url)
@@ -103,13 +103,13 @@ class Capybara::Driver::Mechanize < Capybara::Driver::RackTest
   end
 
   def remote?(url)
-    if !Capybara.app_host.nil? 
+    if !Capybara.app_host.nil?
       true
     elsif Capybara.default_host.nil?
       false
     else
       host = URI.parse(url).host
-      
+
       if host.nil? && last_request_remote?
         true
       else
@@ -121,11 +121,11 @@ class Capybara::Driver::Mechanize < Capybara::Driver::RackTest
   attr_reader :agent
 
   private
-  
+
   def last_request_remote?
     !!@last_request_remote
   end
-  
+
   def register_local_request
     @last_remote_host = nil
     @last_request_remote = false
@@ -142,10 +142,10 @@ class Capybara::Driver::Mechanize < Capybara::Driver::RackTest
       else
         @last_remote_host = "#{remote_uri.host}:#{remote_uri.port}"
       end
-      
+
       reset_cache
       @agent.send *( [method, url] + options)
-        
+
       @last_request_remote = true
     end
   end
@@ -153,32 +153,32 @@ class Capybara::Driver::Mechanize < Capybara::Driver::RackTest
   def remote_response
     ResponseProxy.new(@agent.current_page) if @agent.current_page
   end
-  
+
   class ResponseProxy
     require 'iconv'
     extend Forwardable
-    
+
     attr_reader :page
-    
+
     def initialize(page)
       @page = page
     end
-    
+
     def body
       if page.respond_to?(:encoding)
-        ic = Iconv.new('UTF-8//IGNORE', page.encoding)
-        ic.iconv(page.body + ' ')[0..-2]
+        ic = Iconv.new('UTF-8//IGNORE', page.encoding.to_s)
+        ic.iconv(page.body.to_s + ' ')[0..-2]
       else
         page.body
       end
     end
-    
+
     def current_url
       page.uri.to_s
     end
-    
+
     def headers
-      # Hax the content-type contains utf8, so Capybara specs are failing, need to ask mailinglist  
+      # Hax the content-type contains utf8, so Capybara specs are failing, need to ask mailinglist
       headers = page.response
       headers["content-type"].gsub!(';charset=utf-8', '') if headers["content-type"]
       headers
@@ -186,12 +186,12 @@ class Capybara::Driver::Mechanize < Capybara::Driver::RackTest
 
     def status
       page.code.to_i
-    end    
+    end
 
     def redirect?
       [301, 302].include?(status)
     end
-    
-  end 
-   
+
+  end
+
 end
